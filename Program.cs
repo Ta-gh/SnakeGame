@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic; // Добавили для работы со списками List
+using System.Collections.Generic;
 using System.Threading;
 
 class Program
@@ -10,28 +10,29 @@ class Program
         Console.CursorVisible = false;
         Console.SetWindowSize(80, 25);
         Console.SetBufferSize(80, 25);
-
-        // === ИЗМЕНЕНИЯ ЗДЕСЬ ===
-        // Теперь змейка - это список координат
-        // В C# есть специальный тип для хранения двух чисел - кортеж (int, int)
+        
+        // Создаем генератор случайных чисел
+        Random random = new Random();
+        
+        // Змейка
         List<(int X, int Y)> snake = new List<(int, int)>();
-        
-        // Добавляем голову (первый элемент списка)
-        // Индекс 0 - это голова
         snake.Add((40, 12));
+        snake.Add((39, 12));
+        snake.Add((38, 12));
         
-        // Добавим немного хвоста для начала, чтобы было видно
-        // Хвост будет из двух сегментов за головой
-        snake.Add((39, 12)); // Слева от головы
-        snake.Add((38, 12)); // Еще левее
-        // ======================
-
+        // ЕДА
+        int foodX;
+        int foodY;
+        
+        // Генерируем еду
+        GenerateFood(random, snake, out foodX, out foodY);
+        
         int directionX = 1;
         int directionY = 0;
-
+        
         while (true)
         {
-            // Управление (без изменений)
+            // Управление
             if (Console.KeyAvailable)
             {
                 ConsoleKeyInfo key = Console.ReadKey(true);
@@ -43,28 +44,55 @@ class Program
                     case ConsoleKey.RightArrow: directionX = 1; directionY = 0; break;
                 }
             }
-
-            // === ИЗМЕНЕНИЯ В ЛОГИКЕ ===
-            // Получаем текущую голову (первый элемент списка)
-            var head = snake[0];
             
-            // Вычисляем, где будет новая голова
+            // Логика движения
+            var head = snake[0];
             int newHeadX = head.X + directionX;
             int newHeadY = head.Y + directionY;
             
-            // Вставляем новую голову в начало списка
-            // Insert(0, ...) - вставить на позицию 0 (в самое начало)
+            // === ПРОВЕРКА СТОЛКНОВЕНИЯ С ГРАНИЦАМИ ===
+            if (newHeadX <= 0 || newHeadX >= Console.WindowWidth - 1 ||
+                newHeadY <= 0 || newHeadY >= Console.WindowHeight - 1)
+            {
+                // Игра окончена
+                Console.Clear();
+                Console.SetCursorPosition(Console.WindowWidth / 2 - 10, Console.WindowHeight / 2);
+                Console.WriteLine("GAME OVER! Нажмите любую клавишу...");
+                Console.ReadKey();
+                break;
+            }
+            
+            // === ПРОВЕРКА СТОЛКНОВЕНИЯ С СОБОЙ ===
+            foreach (var segment in snake)
+            {
+                if (segment.X == newHeadX && segment.Y == newHeadY)
+                {
+                    Console.Clear();
+                    Console.SetCursorPosition(Console.WindowWidth / 2 - 10, Console.WindowHeight / 2);
+                    Console.WriteLine("GAME OVER! Нажмите любую клавишу...");
+                    Console.ReadKey();
+                    return;
+                }
+            }
+            
             snake.Insert(0, (newHeadX, newHeadY));
             
-            // Удаляем последний элемент хвоста
-            // snake.Count - это длина списка
-            // snake.Count - 1 - это индекс последнего элемента
-            snake.RemoveAt(snake.Count - 1);
-            // =========================
-
+            // Проверяем, съели ли мы еду
+            if (newHeadX == foodX && newHeadY == foodY)
+            {
+                // Съели еду - не удаляем хвост
+                GenerateFood(random, snake, out foodX, out foodY);
+            }
+            else
+            {
+                // Не съели - удаляем хвост
+                snake.RemoveAt(snake.Count - 1);
+            }
+            
+            // Отрисовка
             Console.Clear();
-
-            // Рисуем границы (код тот же)
+            
+            // Рисуем границы
             for (int i = 0; i < Console.WindowWidth; i++)
             {
                 Console.SetCursorPosition(i, 0);
@@ -79,18 +107,49 @@ class Program
                 Console.SetCursorPosition(Console.WindowWidth - 1, i);
                 Console.Write('#');
             }
-
-            // === ИЗМЕНЕНИЯ В ОТРИСОВКЕ ===
-            // Рисуем всю змейку в цикле
-            // Переменная segment будет по очереди принимать значения всех элементов списка
+            
+            // Рисуем змейку
             foreach (var segment in snake)
             {
-                Console.SetCursorPosition(segment.X, segment.Y);
-                Console.Write('O'); // Каждый сегмент рисуем как O
+                // Проверяем, что координаты в пределах окна
+                if (segment.X >= 0 && segment.X < Console.WindowWidth &&
+                    segment.Y >= 0 && segment.Y < Console.WindowHeight)
+                {
+                    Console.SetCursorPosition(segment.X, segment.Y);
+                    Console.Write('O');
+                }
             }
-            // ===========================
-
+            
+            // Рисуем еду
+            if (foodX > 0 && foodX < Console.WindowWidth - 1 &&
+                foodY > 0 && foodY < Console.WindowHeight - 1)
+            {
+                Console.SetCursorPosition(foodX, foodY);
+                Console.Write('@');
+            }
+            
             Thread.Sleep(100);
         }
+    }
+    
+    // Метод генерации еды
+    static void GenerateFood(Random random, List<(int X, int Y)> snake, out int foodX, out int foodY)
+    {
+        bool isOnSnake;
+        do
+        {
+            foodX = random.Next(1, Console.WindowWidth - 1);
+            foodY = random.Next(1, Console.WindowHeight - 1);
+             
+            isOnSnake = false;
+            foreach (var segment in snake)
+            {
+                if (segment.X == foodX && segment.Y == foodY)
+                {
+                    isOnSnake = true;
+                    break;
+                }
+            }
+        } while (isOnSnake);
     }
 }
