@@ -1,138 +1,96 @@
 ﻿using System;
-using System.Threading; // Нужен для задержки Thread.Sleep
+using System.Collections.Generic; // Добавили для работы со списками List
+using System.Threading;
 
 class Program
 {
     static void Main()
     {
-        // 1. НАСТРОЙКА КОНСОЛИ
-        Console.Title = "Змейка"; // Называем окно
-        Console.CursorVisible = false; // Прячем курсор, чтобы не мешал
-        Console.SetWindowSize(80, 25); // Устанавливаем размер окна (ширина, высота)
-        Console.SetBufferSize(80, 25); // Размер буфера делаем таким же, чтобы не было скролла
+        Console.Title = "Змейка";
+        Console.CursorVisible = false;
+        Console.SetWindowSize(80, 25);
+        Console.SetBufferSize(80, 25);
+
+        // === ИЗМЕНЕНИЯ ЗДЕСЬ ===
+        // Теперь змейка - это список координат
+        // В C# есть специальный тип для хранения двух чисел - кортеж (int, int)
+        List<(int X, int Y)> snake = new List<(int, int)>();
         
-        // 2. ПЕРЕМЕННЫЕ ДЛЯ ЗМЕЙКИ
-        // Голова змейки будет иметь координаты X и Y
-        // Ставим её примерно в центр экрана
-        int headX = 40;
-        int headY = 12;
+        // Добавляем голову (первый элемент списка)
+        // Индекс 0 - это голова
+        snake.Add((40, 12));
         
-        // Направление движения
-        // По умолчанию движемся вправо: X увеличивается, Y не меняется
+        // Добавим немного хвоста для начала, чтобы было видно
+        // Хвост будет из двух сегментов за головой
+        snake.Add((39, 12)); // Слева от головы
+        snake.Add((38, 12)); // Еще левее
+        // ======================
+
         int directionX = 1;
         int directionY = 0;
-        
-        // 3. ИГРОВОЙ ЦИКЛ
-        // while (true) - значит "делать вечно"
+
         while (true)
         {
-            // === ЧАСТЬ 1: УПРАВЛЕНИЕ ===
-            // Проверяем, нажал ли пользователь клавишу
+            // Управление (без изменений)
             if (Console.KeyAvailable)
             {
-                // Считываем нажатую клавишу (true - не показывать её в консоли)
                 ConsoleKeyInfo key = Console.ReadKey(true);
-                
-                // Определяем, какая стрелка нажата
                 switch (key.Key)
                 {
-                    case ConsoleKey.UpArrow:
-                        // Запрещаем движение вверх, если движемся вниз
-                        if (directionY != 1)
-                        {
-                            directionX = 0;   // По X не движемся
-                            directionY = -1;  // Движемся вверх (Y уменьшается)
-                        }
-                        break;
-                        
-                    case ConsoleKey.DownArrow:
-                        // Запрещаем движение вниз, если движемся вверх
-                        if (directionY != -1)
-                        {
-                            directionX = 0;
-                            directionY = 1;   // Движемся вниз (Y увеличивается)
-                        }
-                        break;
-                        
-                    case ConsoleKey.LeftArrow:
-                        // Запрещаем движение влево, если движемся вправо
-                        if (directionX != 1)
-                        {
-                            directionX = -1;  // Движемся влево (X уменьшается)
-                            directionY = 0;
-                        }
-                        break;
-                        
-                    case ConsoleKey.RightArrow:
-                        // Запрещаем движение вправо, если движемся влево
-                        if (directionX != -1)
-                        {
-                            directionX = 1;   // Движемся вправо (X увеличивается)
-                            directionY = 0;
-                        }
-                        break;
-                        
-                    case ConsoleKey.Escape:
-                        // Выход из игры по нажатию Escape
-                        return;
+                    case ConsoleKey.UpArrow: directionX = 0; directionY = -1; break;
+                    case ConsoleKey.DownArrow: directionX = 0; directionY = 1; break;
+                    case ConsoleKey.LeftArrow: directionX = -1; directionY = 0; break;
+                    case ConsoleKey.RightArrow: directionX = 1; directionY = 0; break;
                 }
             }
+
+            // === ИЗМЕНЕНИЯ В ЛОГИКЕ ===
+            // Получаем текущую голову (первый элемент списка)
+            var head = snake[0];
             
-            // === ЧАСТЬ 2: ДВИЖЕНИЕ ===
-            // Изменяем координаты головы согласно направлению
-            headX = headX + directionX;
-            headY = headY + directionY;
+            // Вычисляем, где будет новая голова
+            int newHeadX = head.X + directionX;
+            int newHeadY = head.Y + directionY;
             
-            // === ПРОВЕРКА СТОЛКНОВЕНИЯ СО СТЕНАМИ ===
-            // Проверяем, не врезалась ли змейка в стены
-            if (headX <= 0 || headX >= Console.WindowWidth - 1 || 
-                headY <= 0 || headY >= Console.WindowHeight - 1)
-            {
-                // Игра окончена
-                Console.Clear();
-                Console.SetCursorPosition(Console.WindowWidth / 2 - 10, Console.WindowHeight / 2);
-                Console.WriteLine("GAME OVER! Press any key to exit...");
-                Console.ReadKey(true);
-                break; // Выходим из игрового цикла
-            }
+            // Вставляем новую голову в начало списка
+            // Insert(0, ...) - вставить на позицию 0 (в самое начало)
+            snake.Insert(0, (newHeadX, newHeadY));
             
-            // === ЧАСТЬ 3: ОТРИСОВКА ===
-            Console.Clear(); // Очищаем экран, чтобы старые позиции стерлись
-            
-            // --- Рисуем границы (рамку) ---
-            // Верхняя и нижняя граница
+            // Удаляем последний элемент хвоста
+            // snake.Count - это длина списка
+            // snake.Count - 1 - это индекс последнего элемента
+            snake.RemoveAt(snake.Count - 1);
+            // =========================
+
+            Console.Clear();
+
+            // Рисуем границы (код тот же)
             for (int i = 0; i < Console.WindowWidth; i++)
             {
-                // Верхняя граница (Y = 0)
                 Console.SetCursorPosition(i, 0);
                 Console.Write('#');
-                
-                // Нижняя граница (Y = высота экрана - 1)
                 Console.SetCursorPosition(i, Console.WindowHeight - 1);
                 Console.Write('#');
             }
-            
-            // Левая и правая граница
             for (int i = 0; i < Console.WindowHeight; i++)
             {
-                // Левая граница (X = 0)
                 Console.SetCursorPosition(0, i);
                 Console.Write('#');
-                
-                // Правая граница (X = ширина экрана - 1)
                 Console.SetCursorPosition(Console.WindowWidth - 1, i);
                 Console.Write('#');
             }
-            
-            // --- Рисуем голову змейки ---
-            Console.SetCursorPosition(headX, headY);
-            Console.Write('O'); // Рисуем голову как букву O
 
-            // === ЧАСТЬ 4: ЗАДЕРЖКА ===
-            // Без задержки змейка будет двигаться слишком быстро
-            // 100 миллисекунд = 0.1 секунды
+            // === ИЗМЕНЕНИЯ В ОТРИСОВКЕ ===
+            // Рисуем всю змейку в цикле
+            // Переменная segment будет по очереди принимать значения всех элементов списка
+            foreach (var segment in snake)
+            {
+                Console.SetCursorPosition(segment.X, segment.Y);
+                Console.Write('O'); // Каждый сегмент рисуем как O
+            }
+            // ===========================
+
             Thread.Sleep(100);
         }
     }
 }
-
